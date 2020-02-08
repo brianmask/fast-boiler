@@ -3,61 +3,66 @@
 
 from typing import List, Optional, Generic, TypeVar, Type
 
-from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
+from sqlalchemy import Table
 
-from app.core.db import Base, database
+from app.core.db import  database
 
-ModelType = TypeVar("ModelType", bound=Base)
+TableType = TypeVar("TableType", bound=Table)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
-class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+class CRUDBase(Generic[TableType, CreateSchemaType, UpdateSchemaType]):
     """ CRUD object with default methods to Create, Read, Update, Delete (CRUD). """
 
-    def __init__(self, model: Type[ModelType]):
+    def __init__(self, table: Type[TableType]):
         """
         CRUD object with default methods to Create, Read, Update, Delete (CRUD).
 
         **Parameters**
 
-        * `model`: A SQLAlchemy model class
+        * `table`: A SQLAlchemy table
         * `schema`: A Pydantic model (schema) class
         """
-        self.model = model
-        self.table = model.__table__
+        self.table = table
 
-    async def get(self, id: int) -> Optional[ModelType]:
-        query = self.table.select().where(id = self.table.c.id)
-        return await db_session.query(self.model).filter(self.model.id == id).first()
+    async def get(self, id: int) -> Optional[TableType]:
+        """ implements get /id/ """
 
-    async def get_multi(self, db_session: Database, *, skip=0, limit=100) -> List[ModelType]:
-        return await db_session.query(self.model).offset(skip).limit(limit).all()
+        query = self.table.select().where(id == self.table.c.id)
+        return await database.fetch_one(query=query)
 
-    async def create(self, db_session: Database, *, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
-        db_obj = self.model(**obj_in_data)
-        db_session.add(db_obj)
-        db_session.commit()
-        db_session.refresh(db_obj)
-        return db_obj
+    async def get_multi(self, *, skip=0, limit=100) -> List[TableType]:
+        """ implements get /?skip=0&limit=100 if limit=0 all results are returned
+        regardless of skip
+        """
 
-    def update(
-        self, db_session: Database, *, db_obj: ModelType, obj_in: UpdateSchemaType
-    ) -> ModelType:
-        obj_data = jsonable_encoder(db_obj)
-        update_data = obj_in.dict(skip_defaults=True)
-        for field in obj_data:
-            if field in update_data:
-                setattr(db_obj, field, update_data[field])
-        db_session.add(db_obj)
-        db_session.commit()
-        db_session.refresh(db_obj)
-        return db_obj
+        query = self.table.select()
+        if limit > 0:
+            query = query.offset(skip).limit(limit)
+        return await database.fetch_all(query=query)
 
-    def remove(self, db_session: Database, *, id: int) -> ModelType:
-        obj = db_session.query(self.model).get(id)
-        db_session.delete(obj)
-        db_session.commit()
-        return obj
+    async def create(self, *, obj_in: CreateSchemaType) -> TableType:
+        """ implements post / """
+
+        query = self.table.insert().values(**obj_in.dict())
+        return await database.execute(query=query)
+
+    async def update(self, *, db_obj: TableType, obj_in: UpdateSchemaType) -> TableType:
+        """ implements put /id/ """
+
+        query = (
+            self.table
+            .udate()
+            .where(db_obj.id == self.table.id)
+            .values(**obj_in.dict(skip_defaults=True))
+            .returning(self.table.c.id)
+        )
+        return await database.execute(query=query)
+
+    async def remove(self, *, id: int) -> TableType:
+        """ impplements delete /id/ """
+
+        query = self.table.delete().where(id == self.table.c.id)
+        return await database.execute(query=query)

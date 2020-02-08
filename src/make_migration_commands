@@ -1,0 +1,2 @@
+PYTHONPATH=. alembic revision --autogenerate -m "initial auth groups"
+PYTHONPATH=. alembic upgrade head

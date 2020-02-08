@@ -18,16 +18,16 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 
 from app.core import settings
-from app.core.db import Base
+from app.core.db import metadata
 
 # Import All of our Current Models..
 from app.models import (
-    User,
-    Group
+    user,
+    group
 )
 
 config.set_main_option('sqlalchemy.url', str(settings.DATABASE_URL))
-target_metadata = Base.metadata 
+target_metadata = metadata 
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

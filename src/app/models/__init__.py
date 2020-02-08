@@ -1,3 +1,3 @@
 """ Model Imports """
 
-from .auth import Group, User, USER_GROUPS
+from .auth import group, user, user_groups
