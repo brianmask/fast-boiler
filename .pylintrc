@@ -254,6 +254,7 @@ good-names=i,
            app,
            router,
            crud,
+           logger,
 
 
 # Include a hint for the correct naming format with invalid-name.

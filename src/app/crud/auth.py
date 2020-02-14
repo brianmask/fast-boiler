@@ -48,19 +48,24 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
     async def authenticate(self, *, identification: str, password: str) -> Optional[User]:
         """ authenticate the user - return user or none """
 
-        current_user = self.get_by_email_or_username(identification=identification)
-        if not current_user:
-            return None
-        if not verify_password(password, current_user.hashed_password):
-            return None
-        return current_user
+        record = await self.get_by_email_or_username(identification=identification)
 
-    async def is_active(self, user_obj: User) -> bool:
+        if not record:
+            return None
+
+        if not verify_password(password, record['hashed_password']):
+            return None
+
+        return record
+
+    def is_active(self, user_obj: User) -> bool:
         """ returns true if user is currently active """
 
-        return user_obj.is_active
+        return user_obj['is_active']
 
-    async def is_superuser(self, user_obj: User) -> bool:
+    def is_superuser(self, user_obj: User) -> bool:
         """ returns true if user is superuser """
 
-        return user_obj.is_superuser
+        return user_obj['is_superuser']
+
+USER_CRUD = UserCRUD()
