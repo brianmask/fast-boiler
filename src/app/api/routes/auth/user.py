@@ -2,10 +2,10 @@
 
 from typing import List
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.exceptions import CRUDError
-from app.core.security.token import get_current_active_superuser, get_current_active_user
+from app.api.security.permissions import get_current_active_superuser, get_current_active_user
 from app.crud.auth import UserCRUD
 from app.schema.auth import User, UserCreate, UserList
 
@@ -37,8 +37,14 @@ async def create_user(user_in: UserCreate):
     return new_user
 
 
+@router.get('/', response_model=User)
+async def get_self(user: User = Depends(get_current_active_user)):
+    """ returns ones self """
+
+    return user
+
 @router.get(
-    '/',
+    '/get',
     dependencies=[Depends(get_current_active_user)],
     response_model=List[User],
     response_model_exclude_unset=True

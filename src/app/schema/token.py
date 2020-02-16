@@ -13,4 +13,7 @@ class Token(BaseModel):
 class TokenPayload(BaseModel):
     """ Who does this token belong to? """
 
-    user_id: int = None
+    sub: int = None
+    iat: int = None
+    exp: int = None
+    max_exp: int = None

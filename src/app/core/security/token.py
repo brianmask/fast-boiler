@@ -2,74 +2,58 @@
 
 from datetime import datetime, timedelta
 
-from fastapi import HTTPException, Security
-from fastapi.security import OAuth2PasswordBearer
+#from fastapi.security import OAuth2PasswordBearer
 import jwt
-from jwt import PyJWTError
-from starlette.status import HTTP_403_FORBIDDEN
+from starlette.responses import Response
 
-from app import crud
 from app.core import settings
+
 from app.schema.auth import User
-from app.schema.token import TokenPayload
 
-JWT_ALGORITHM = "HS256"
-JWT_SUBJECT = "access"
+JWT_ALGORITHM = settings.JWT_ALGORITHM
+JWT_SUBJECT = settings.JWT_SUBJECT
 
-REUSABLE_OAUTH2 = OAuth2PasswordBearer(tokenUrl="/api/auth/login/jwt")
 
-# Helpers
-
-def create_access_token_jwt(*, data: dict, expires_delta: timedelta = None):
+def create_access_token_jwt(
+        *,
+        user: User,
+        expires_delta: timedelta = timedelta(seconds=settings.JWT_EXPIRATION_TIME)
+) -> str:
     """ encode the data dict provided into jwt """
 
-    to_encode = data.copy()
+    now = datetime.utcnow()
+    max_exp = settings.JWT_MAXIMUM_LIFETIME
+
     if expires_delta is not None:
         expire = datetime.utcnow() + expires_delta
 
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
 
-    to_encode.update({"exp": expire, "sub": JWT_SUBJECT})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=JWT_ALGORITHM)
+    data = {
+        'sub': user['id'],
+        'iat': now,
+        'exp': expire,
+        'max_exp': max_exp,
+        # Add whatever else here that I will use later
+    }
+
+    encoded_jwt = jwt.encode(data, settings.SECRET_KEY, algorithm=JWT_ALGORITHM)
 
     return encoded_jwt
 
-# Depends
+def add_response_auth_cookie(*, response: Response, access_token: str) -> Response:
+    """ Add auth cookie with provided token to the response object """
 
-async def get_current_user_jwt(token: str = Security(REUSABLE_OAUTH2)):
-    """ Reads jwt token and returns user """
+    max_age = settings.JWT_MAXIMUM_LIFETIME
+    expires = settings.JWT_EXPIRATION_TIME
 
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        token_data = TokenPayload(**payload)
+    response.set_cookie(
+        "Authorization",
+        value=f"Bearer {access_token}",
+        httponly=True,
+        max_age=max_age,
+        expires=expires,
+    )
 
-    except PyJWTError:
-        raise HTTPException(
-            status_code=HTTP_403_FORBIDDEN, detail="Could not validate credentials"
-        )
-
-    user = await crud.user.get(id=token_data.user_id)
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    return user
-
-
-async def get_current_active_user(current_user: User = Security(get_current_user_jwt)):
-    """ user must be active """
-
-    if not crud.user.is_active(current_user):
-        raise HTTPException(status_code=400, detail="Inactive user")
-
-    return current_user
-
-
-async def get_current_active_superuser(current_user: User = Security(get_current_user_jwt)):
-    """ user must be superuser """
-
-    if not crud.user.is_superuser(current_user):
-        raise HTTPException(status_code=400, detail="The user doesn't have enough privileges")
-
-    return current_user
+    return response
