@@ -1,19 +1,18 @@
 """ Application Entrypoint """
 
-import time
-
 from fastapi import FastAPI, Depends
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-from starlette.requests import Request
+from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
 from app.api.routes import router as api_router
 from app.api.security.permissions import get_current_active_user
+from app.core import settings
 from app.core.db import database
+from app.core.middleware import AuthCookieRefresher, RequestResponseTimer
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-#app = FastAPI()
 
 
 @app.on_event("startup")
@@ -28,16 +27,22 @@ async def shutdown():
 
     await database.disconnect()
 
-@app.middleware('http')
-async def add_process_time_header(request: Request, call_next):
-    """ add system time spent on api call to header """
+# setup CORS through settings
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOW_ORIGINS,
+    allow_credentials=settings.ALLOW_CREDENTIALS,
+    allow_methods=settings.ALLOW_METHODS,
+    allow_headers=settings.ALLOW_HEADERS
+)
 
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    response.headers['X-Process-Time'] = str(process_time)
-    return response
+# Add response times to headers
+app.add_middleware(RequestResponseTimer)
 
+# Refresh cookie / token on each call
+app.add_middleware(AuthCookieRefresher)
+
+# API routes
 app.include_router(api_router.get_router(), prefix='/api')
 
 @app.get("/openapi.json", dependencies=[Depends(get_current_active_user)], include_in_schema=False)

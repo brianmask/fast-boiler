@@ -7,7 +7,7 @@ from app.api.security.permissions import get_token_payload
 router = APIRouter()
 
 
-@router.get("/ping", dependencies=[Depends(get_token_payload)])
+@router.get("", dependencies=[Depends(get_token_payload)])
 async def pong():
     """basic healthcheck
 

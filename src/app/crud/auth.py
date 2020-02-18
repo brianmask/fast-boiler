@@ -11,7 +11,7 @@ from app.core.security.password import verify_password, get_password_hash
 from app.crud.base import CRUDBase
 from app.helpers.expressions import VALID_EMAIL
 from app.models.auth import user
-from app.schema.auth import UserCreate, UserUpdate, UserDBCreate, User
+from app.schema.auth import UserCreate, UserUpdate, UserDBCreate, User, UserDB
 
 
 class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
@@ -22,7 +22,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
 
         super().__init__(table)
 
-    async def get_by_email_or_username(self, *, identification: str) -> Optional[User]:
+    async def get_by_email_or_username(self, *, identification: str) -> Optional[UserDB]:
         """ retrieves a user object by either email or username """
 
         if re.search(VALID_EMAIL, identification):

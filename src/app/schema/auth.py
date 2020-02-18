@@ -97,7 +97,7 @@ class UserUpdate(UserBaseDB):
 
 
 class User(UserBaseDB):
-    """ Many to many fields returned by API """
+    """ Does not include hashed password, could include other extra's """
 
     groups: Optional[List] = None
 

@@ -1,1 +1,1 @@
-export DATABASE_URL=postgresql://hello_fastapi:hello_fastapi@db/hello_fastapi_dev
+export DATABASE_URL=postgresql://<user>:<password>@<ip>/<database>       # If omitted will fallback to sqlite in project root

@@ -17,6 +17,10 @@ JWT_ALGORITHM = settings.JWT_ALGORITHM
 async def get_token_payload_no_verify(token: str = Security(REUSABLE_OAUTH2)):
     """ Reads jwt token and returns user from payload !! does not verify the signature !!
 
+    adding a variable to get_token_payload similar to verify: bool = True will expose
+    the variable to api and document the option in swagger.  We don't want to let a user
+    control if the token was verified or not.
+
     :param token: the jwt to decode
     :param verify: cryptography verification of the token
     """
