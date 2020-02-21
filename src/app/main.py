@@ -49,7 +49,7 @@ app.include_router(api_router.get_router(), prefix='/api')
 async def get_open_api_endpoint():
     """ openapi.json """
     # TODO make this a developer role
-    return JSONResponse(get_openapi(title="fast_home - API", version=1, routes=app.routes))
+    return JSONResponse(get_openapi(title="FastHomeAPI", version=1, routes=app.routes))
 
 @app.get("/docs", dependencies=[Depends(get_current_active_user)], include_in_schema=False)
 async def get_documentation():
